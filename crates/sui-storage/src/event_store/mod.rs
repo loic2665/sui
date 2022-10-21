@@ -328,93 +328,94 @@ pub trait EventStore {
     /// Returns Ok(rows_affected).
     async fn add_events(&self, events: &mut [EventEnvelope]) -> Result<u64, SuiError>;
 
+    /// Returns at most `limit` events emitted by all transaction, ordered .
     async fn all_events(
         &self,
         cursor: EventID,
         limit: usize,
-        reverse: bool,
+        descending: bool,
     ) -> Result<Vec<StoredEvent>, SuiError>;
     /// Returns at most `limit` events emitted by a given
-    /// transaction, sorted in order emitted.
+    /// transaction, sorted in time order defined by the [descending] parameter.
     async fn events_by_transaction(
         &self,
         cursor: EventID,
         digest: TransactionDigest,
         limit: usize,
-        reverse: bool,
+        descending: bool,
     ) -> Result<Vec<StoredEvent>, SuiError>;
 
     /// Returns at most `limit` events of a certain EventType
     /// (e.g. `TransferObject`) within [start_time, end_time),
-    /// sorted in in ascending time.
+    /// sorted in time order defined by the [descending] parameter.
     async fn events_by_type(
         &self,
         cursor: EventID,
         event_type: EventType,
         limit: usize,
-        reverse: bool,
+        descending: bool,
     ) -> Result<Vec<StoredEvent>, SuiError>;
 
     /// Returns at most `limit` events emitted in a certain Module ID during
-    /// [start_time, end_time), sorted in ascending time.
+    /// sorted in time order defined by the [descending] parameter.
     async fn events_by_module_id(
         &self,
         cursor: EventID,
         module: &ModuleId,
         limit: usize,
-        reverse: bool,
+        descending: bool,
     ) -> Result<Vec<StoredEvent>, SuiError>;
 
     /// Returns at most `limit` events with the move event struct name
     /// (e.g. `0x2::devnet_nft::MintNFTEvent`) emitted
-    /// during [start_time, end_time), sorted in ascending time.
+    /// sorted in time order defined by the [descending] parameter.
     async fn events_by_move_event_struct_name(
         &self,
         cursor: EventID,
         move_event_struct_name: &str,
         limit: usize,
-        reverse: bool,
+        descending: bool,
     ) -> Result<Vec<StoredEvent>, SuiError>;
 
     /// Returns at most `limit` events associated with a certain sender
-    /// emitted during [start_time, end_time), sorted in ascending time.
+    /// sorted in time order defined by the [descending] parameter.
     async fn events_by_sender(
         &self,
         cursor: EventID,
         sender: &SuiAddress,
         limit: usize,
-        reverse: bool,
+        descending: bool,
     ) -> Result<Vec<StoredEvent>, SuiError>;
 
     /// Returns at most `limit` events associated with a certain recipient
-    /// emitted during [start_time, end_time), sorted in ascending time.
+    /// sorted in time order defined by the [descending] parameter.
     async fn events_by_recipient(
         &self,
         cursor: EventID,
         recipient: &Owner,
         limit: usize,
-        reverse: bool,
+        descending: bool,
     ) -> Result<Vec<StoredEvent>, SuiError>;
 
     /// Returns at most `limit` events associated with a certain object id
-    /// emitted during [start_time, end_time), sorted in ascending time.
+    /// sorted in time order defined by the [descending] parameter.
     async fn events_by_object(
         &self,
         cursor: EventID,
         object: &ObjectID,
         limit: usize,
-        reverse: bool,
+        descending: bool,
     ) -> Result<Vec<StoredEvent>, SuiError>;
 
     /// Generic event iterator that returns events emitted between
-    /// [start_time, end_time), sorted in ascending time.
+    /// [start_time, end_time), sorted in time order defined by the [descending] parameter.
     async fn event_iterator(
         &self,
         cursor: EventID,
         start_time: u64,
         end_time: u64,
         limit: usize,
-        reverse: bool,
+        descending: bool,
     ) -> Result<Vec<StoredEvent>, SuiError>;
 }
 

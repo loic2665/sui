@@ -4,6 +4,7 @@
 //! SQL and SQLite-based Event Store
 
 use std::collections::BTreeMap;
+use std::fmt::{Display, Formatter};
 use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -326,48 +327,6 @@ impl From<SqliteRow> for StoredEvent {
     }
 }
 
-const ALL_QUERY_ASC: &str = "SELECT * FROM events WHERE seq_num >= ? ORDER BY seq_num ASC LIMIT ?";
-const ALL_QUERY_DESC: &str =
-    "SELECT * FROM events WHERE seq_num <= ? ORDER BY seq_num DESC LIMIT ?";
-
-const TS_QUERY_ASC: &str =
-    "SELECT * FROM events WHERE seq_num >= ? AND timestamp >= ? AND timestamp < ? ORDER BY seq_num ASC LIMIT ?";
-const TS_QUERY_DESC: &str =
-    "SELECT * FROM events WHERE seq_num <= ? AND timestamp >= ? AND timestamp < ? ORDER BY seq_num DESC LIMIT ?";
-
-const TX_QUERY_ASC: &str =
-    "SELECT * FROM events WHERE seq_num >= ? AND tx_digest = ? ORDER BY seq_num ASC LIMIT ?";
-const TX_QUERY_DESC: &str =
-    "SELECT * FROM events WHERE seq_num <= ? AND tx_digest = ? ORDER BY seq_num DESC LIMIT ?";
-
-const QUERY_BY_TYPE_ASC: &str =
-    "SELECT * FROM events WHERE seq_num >= ? AND event_type = ? ORDER BY seq_num ASC LIMIT ?";
-const QUERY_BY_TYPE_DESC: &str =
-    "SELECT * FROM events WHERE seq_num <= ? AND event_type = ? ORDER BY seq_num DESC LIMIT ?";
-
-const QUERY_BY_MODULE_ASC: &str = "SELECT * FROM events WHERE seq_num >= ? AND package_id = ? AND module_name = ? ORDER BY seq_num ASC LIMIT ?";
-const QUERY_BY_MODULE_DESC: &str = "SELECT * FROM events WHERE seq_num <= ? AND package_id = ? AND module_name = ? ORDER BY seq_num DESC LIMIT ?";
-
-const QUERY_BY_MOVE_EVENT_STRUCT_NAME_ASC: &str =
-    "SELECT * FROM events WHERE seq_num >= ? AND move_event_name = ? ORDER BY seq_num ASC LIMIT ?";
-const QUERY_BY_MOVE_EVENT_STRUCT_NAME_DESC: &str =
-    "SELECT * FROM events WHERE seq_num <= ? AND move_event_name = ? ORDER BY seq_num DESC LIMIT ?";
-
-const QUERY_BY_SENDER_ASC: &str =
-    "SELECT * FROM events WHERE seq_num >= ? AND sender = ? ORDER BY seq_num ASC LIMIT ?";
-const QUERY_BY_SENDER_DESC: &str =
-    "SELECT * FROM events WHERE seq_num <= ? AND sender = ? ORDER BY seq_num DESC LIMIT ?";
-
-const QUERY_BY_RECIPIENT_ASC: &str =
-    "SELECT * FROM events WHERE seq_num >= ? AND recipient = ? ORDER BY seq_num ASC LIMIT ?";
-const QUERY_BY_RECIPIENT_DESC: &str =
-    "SELECT * FROM events WHERE seq_num <= ? AND recipient = ? ORDER BY seq_num DESC LIMIT ?";
-
-const QUERY_BY_OBJECT_ID_ASC: &str =
-    "SELECT * FROM events WHERE seq_num >= ? AND object_id = ? ORDER BY seq_num ASC LIMIT ?";
-const QUERY_BY_OBJECT_ID_DESC: &str =
-    "SELECT * FROM events WHERE seq_num <= ? AND object_id = ? ORDER BY seq_num DESC LIMIT ?";
-
 #[async_trait]
 impl EventStore for SqlEventStore {
     #[instrument(level = "debug", skip_all, err)]
@@ -434,14 +393,10 @@ impl EventStore for SqlEventStore {
         &self,
         cursor: EventID,
         limit: usize,
-        reverse: bool,
+        descending: bool,
     ) -> Result<Vec<StoredEvent>, SuiError> {
-        let query = if reverse {
-            ALL_QUERY_DESC
-        } else {
-            ALL_QUERY_ASC
-        };
-        let rows = sqlx::query(query)
+        let query = get_event_query(vec![], descending);
+        let rows = sqlx::query(&query)
             .persistent(true)
             .bind(cursor as i64)
             .bind(limit as i64)
@@ -458,10 +413,10 @@ impl EventStore for SqlEventStore {
         cursor: EventID,
         digest: TransactionDigest,
         limit: usize,
-        reverse: bool,
+        descending: bool,
     ) -> Result<Vec<StoredEvent>, SuiError> {
-        let query = if reverse { TX_QUERY_DESC } else { TX_QUERY_ASC };
-        let rows = sqlx::query(query)
+        let query = get_event_query(vec![("tx_digest", Comparator::Equal)], descending);
+        let rows = sqlx::query(&query)
             .persistent(true)
             .bind(cursor as i64)
             .bind(digest.to_bytes())
@@ -479,14 +434,10 @@ impl EventStore for SqlEventStore {
         cursor: EventID,
         event_type: EventType,
         limit: usize,
-        reverse: bool,
+        descending: bool,
     ) -> Result<Vec<StoredEvent>, SuiError> {
-        let query = if reverse {
-            QUERY_BY_TYPE_DESC
-        } else {
-            QUERY_BY_TYPE_ASC
-        };
-        let rows = sqlx::query(query)
+        let query = get_event_query(vec![("event_type", Comparator::Equal)], descending);
+        let rows = sqlx::query(&query)
             .persistent(true)
             .bind(cursor as i64)
             .bind(event_type as u16)
@@ -505,10 +456,16 @@ impl EventStore for SqlEventStore {
         start_time: u64,
         end_time: u64,
         limit: usize,
-        reverse: bool,
+        descending: bool,
     ) -> Result<Vec<StoredEvent>, SuiError> {
-        let query = if reverse { TS_QUERY_DESC } else { TS_QUERY_ASC };
-        let rows = sqlx::query(query)
+        let query = get_event_query(
+            vec![
+                ("timestamp", Comparator::MoreThenOrEq),
+                ("timestamp", Comparator::LessThen),
+            ],
+            descending,
+        );
+        let rows = sqlx::query(&query)
             .bind(cursor as i64)
             .bind(start_time as i64)
             .bind(end_time as i64)
@@ -526,14 +483,17 @@ impl EventStore for SqlEventStore {
         cursor: EventID,
         module: &ModuleId,
         limit: usize,
-        reverse: bool,
+        descending: bool,
     ) -> Result<Vec<StoredEvent>, SuiError> {
-        let query = if reverse {
-            QUERY_BY_MODULE_DESC
-        } else {
-            QUERY_BY_MODULE_ASC
-        };
-        let rows = sqlx::query(query)
+        let query = get_event_query(
+            vec![
+                ("package_id", Comparator::Equal),
+                ("module_name", Comparator::Equal),
+            ],
+            descending,
+        );
+
+        let rows = sqlx::query(&query)
             .persistent(true)
             .bind(cursor as i64)
             .bind(module.address().to_vec())
@@ -552,15 +512,12 @@ impl EventStore for SqlEventStore {
         cursor: EventID,
         move_event_struct_name: &str,
         limit: usize,
-        reverse: bool,
+        descending: bool,
     ) -> Result<Vec<StoredEvent>, SuiError> {
-        let query = if reverse {
-            QUERY_BY_MOVE_EVENT_STRUCT_NAME_DESC
-        } else {
-            QUERY_BY_MOVE_EVENT_STRUCT_NAME_ASC
-        };
+        let query = get_event_query(vec![("move_event_name", Comparator::Equal)], descending);
+
         // TODO: duplication: these 10 lines are repetitive (4 times) in this file.
-        let rows = sqlx::query(query)
+        let rows = sqlx::query(&query)
             .persistent(true)
             .bind(cursor as i64)
             .bind(move_event_struct_name)
@@ -578,15 +535,11 @@ impl EventStore for SqlEventStore {
         cursor: EventID,
         sender: &SuiAddress,
         limit: usize,
-        reverse: bool,
+        descending: bool,
     ) -> Result<Vec<StoredEvent>, SuiError> {
-        let query = if reverse {
-            QUERY_BY_SENDER_DESC
-        } else {
-            QUERY_BY_SENDER_ASC
-        };
+        let query = get_event_query(vec![("sender", Comparator::Equal)], descending);
         let sender_vec = sender.to_vec();
-        let rows = sqlx::query(query)
+        let rows = sqlx::query(&query)
             .persistent(true)
             .bind(cursor as i64)
             .bind(sender_vec)
@@ -604,18 +557,14 @@ impl EventStore for SqlEventStore {
         cursor: EventID,
         recipient: &Owner,
         limit: usize,
-        reverse: bool,
+        descending: bool,
     ) -> Result<Vec<StoredEvent>, SuiError> {
-        let query = if reverse {
-            QUERY_BY_RECIPIENT_DESC
-        } else {
-            QUERY_BY_RECIPIENT_ASC
-        };
+        let query = get_event_query(vec![("recipient", Comparator::Equal)], descending);
         let recipient_str =
             serde_json::to_string(recipient).map_err(|e| SuiError::OwnerFailedToSerialize {
                 error: (e.to_string()),
             })?;
-        let rows = sqlx::query(query)
+        let rows = sqlx::query(&query)
             .persistent(true)
             .bind(cursor as i64)
             .bind(recipient_str)
@@ -633,16 +582,12 @@ impl EventStore for SqlEventStore {
         cursor: EventID,
         object: &ObjectID,
         limit: usize,
-        reverse: bool,
+        descending: bool,
     ) -> Result<Vec<StoredEvent>, SuiError> {
-        let query = if reverse {
-            QUERY_BY_OBJECT_ID_DESC
-        } else {
-            QUERY_BY_OBJECT_ID_ASC
-        };
+        let query = get_event_query(vec![("object_id", Comparator::Equal)], descending);
         let object_vec = object.to_vec();
 
-        let rows = sqlx::query(query)
+        let rows = sqlx::query(&query)
             .persistent(true)
             .bind(cursor as i64)
             .bind(object_vec)
@@ -657,6 +602,45 @@ impl EventStore for SqlEventStore {
 
 fn convert_sqlx_err(err: sqlx::Error) -> SuiError {
     SuiError::GenericStorageError(err.to_string())
+}
+
+fn get_event_query(causes: Vec<(&str, Comparator)>, descending: bool) -> String {
+    let (seq_cmp, order) = if descending {
+        (Comparator::LessThenOrEq, "DESC")
+    } else {
+        (Comparator::MoreThenOrEq, "ASC")
+    };
+    let mut query = format!("SELECT * FROM events WHERE seq_num {seq_cmp} ?");
+    if !causes.is_empty() {
+        query.push_str(" AND ");
+    }
+    let causes = causes
+        .iter()
+        .map(|(cause, cmp)| format!("{cause} {cmp} ?"))
+        .collect::<Vec<_>>()
+        .join(" AND ");
+    query.push_str(&causes);
+    query.push_str(&format!(" ORDER BY seq_num {order} LIMIT ?"));
+    query
+}
+
+enum Comparator {
+    Equal,
+    LessThenOrEq,
+    MoreThenOrEq,
+    LessThen,
+}
+
+impl Display for Comparator {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            Comparator::Equal => "=",
+            Comparator::LessThenOrEq => "<=",
+            Comparator::MoreThenOrEq => ">=",
+            Comparator::LessThen => "<",
+        };
+        write!(f, "{s}")
+    }
 }
 
 #[cfg(test)]
@@ -1250,5 +1234,46 @@ mod tests {
         assert_eq!(db.total_event_count().await?, 6);
 
         Ok(())
+    }
+
+    #[test]
+    fn event_query_test() {
+        let query = get_event_query(vec![], false);
+        assert_eq!(
+            "SELECT * FROM events WHERE seq_num >= ? ORDER BY seq_num ASC LIMIT ?",
+            query
+        );
+        let query = get_event_query(vec![], true);
+        assert_eq!(
+            "SELECT * FROM events WHERE seq_num <= ? ORDER BY seq_num DESC LIMIT ?",
+            query
+        );
+
+        let query = get_event_query(vec![("event_type", Comparator::Equal)], false);
+        assert_eq!("SELECT * FROM events WHERE seq_num >= ? AND event_type = ? ORDER BY seq_num ASC LIMIT ?", query);
+
+        let query = get_event_query(vec![("event_type", Comparator::Equal)], true);
+        assert_eq!("SELECT * FROM events WHERE seq_num <= ? AND event_type = ? ORDER BY seq_num DESC LIMIT ?", query);
+
+        let query = get_event_query(vec![("event_type", Comparator::Equal)], true);
+        assert_eq!("SELECT * FROM events WHERE seq_num <= ? AND event_type = ? ORDER BY seq_num DESC LIMIT ?", query);
+
+        let query = get_event_query(
+            vec![
+                ("package_id", Comparator::Equal),
+                ("module_name", Comparator::Equal),
+            ],
+            false,
+        );
+        assert_eq!("SELECT * FROM events WHERE seq_num >= ? AND package_id = ? AND module_name = ? ORDER BY seq_num ASC LIMIT ?", query);
+
+        let query = get_event_query(
+            vec![
+                ("package_id", Comparator::Equal),
+                ("module_name", Comparator::Equal),
+            ],
+            true,
+        );
+        assert_eq!("SELECT * FROM events WHERE seq_num <= ? AND package_id = ? AND module_name = ? ORDER BY seq_num DESC LIMIT ?", query);
     }
 }
