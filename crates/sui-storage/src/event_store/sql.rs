@@ -266,7 +266,7 @@ impl From<SqliteRow> for StoredEvent {
     // TODO: gracefully handle data corruption/incompatibility without panicking
     fn from(row: SqliteRow) -> Self {
         let timestamp: i64 = row.get(EventsTableColumns::Timestamp as usize);
-        let seq_num: i64 = row.get(EventsTableColumns::SeqNum as usize);
+        let id: i64 = row.get(EventsTableColumns::SeqNum as usize);
         let digest_raw: Option<Vec<u8>> = row.get(EventsTableColumns::TxDigest as usize);
         let tx_digest = digest_raw.map(|bytes| {
             TransactionDigest::new(
@@ -310,7 +310,7 @@ impl From<SqliteRow> for StoredEvent {
             .expect("Error converting stored recipient address to Owner");
 
         StoredEvent {
-            seq_num: seq_num as u64,
+            id: id as u64,
             timestamp: timestamp as u64,
             tx_digest,
             event_type: SharedStr::from(Event::name_from_ordinal(event_type as usize)),
@@ -330,7 +330,7 @@ impl From<SqliteRow> for StoredEvent {
 #[async_trait]
 impl EventStore for SqlEventStore {
     #[instrument(level = "debug", skip_all, err)]
-    async fn add_events(&self, events: &mut [EventEnvelope]) -> Result<u64, SuiError> {
+    async fn add_events(&self, events: &[EventEnvelope]) -> Result<u64, SuiError> {
         // TODO: submit writes in one transaction/batch so it won't just fail in the middle
         let mut cur_seq = self.seq_num.load(Ordering::Acquire);
         let initial_seq = cur_seq;
@@ -372,7 +372,6 @@ impl EventStore for SqlEventStore {
                 .execute(&self.pool)
                 .await
                 .map_err(convert_sqlx_err)?;
-            event.seq_num = res.last_insert_rowid() as u64;
             rows_affected += res.rows_affected();
         }
 

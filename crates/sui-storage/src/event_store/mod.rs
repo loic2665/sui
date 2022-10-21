@@ -45,7 +45,7 @@ pub const AMOUNT_KEY: &str = "amount";
 #[allow(unused)]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct StoredEvent {
-    seq_num: u64,
+    id: EventID,
     /// UTC timestamp in milliseconds
     timestamp: u64,
     /// Not present for non-transaction System events (eg EpochChange)
@@ -274,7 +274,7 @@ impl TryInto<SuiEventEnvelope> for StoredEvent {
     type Error = anyhow::Error;
     fn try_into(self) -> Result<SuiEventEnvelope, Self::Error> {
         let timestamp = self.timestamp;
-        let seq_num = self.seq_num;
+        let id = self.id;
         let tx_digest = self.tx_digest;
         let event_type_str = self.event_type.as_str();
         let event = match EventType::from_str(event_type_str) {
@@ -293,7 +293,7 @@ impl TryInto<SuiEventEnvelope> for StoredEvent {
             Err(e) => anyhow::bail!("Invalid EventType {event_type_str}: {e:?}"),
         }?;
         Ok(SuiEventEnvelope {
-            id: seq_num,
+            id,
             timestamp,
             tx_digest,
             event,
@@ -326,7 +326,7 @@ pub trait EventStore {
     /// which have sequence numbers below the current one will be skipped.  This feature
     /// is intended for deduplication.
     /// Returns Ok(rows_affected).
-    async fn add_events(&self, events: &mut [EventEnvelope]) -> Result<u64, SuiError>;
+    async fn add_events(&self, events: &[EventEnvelope]) -> Result<u64, SuiError>;
 
     /// Returns at most `limit` events emitted by all transaction, ordered .
     async fn all_events(

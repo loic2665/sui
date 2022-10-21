@@ -32,7 +32,6 @@ use crate::{
 /// A universal Sui event type encapsulating different types of events
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EventEnvelope {
-    pub seq_num: EventID,
     /// UTC timestamp in milliseconds since epoch (1/1/1970)
     pub timestamp: u64,
     /// Transaction digest of associated transaction, if any
@@ -49,23 +48,6 @@ pub struct EventEnvelope {
 pub type EventID = u64;
 
 impl EventEnvelope {
-    pub fn new(
-        timestamp: u64,
-        tx_digest: Option<TransactionDigest>,
-        tx_seq_num: u64,
-        event: Event,
-        move_struct_json_value: Option<Value>,
-    ) -> Self {
-        Self {
-            seq_num: 0,
-            timestamp,
-            tx_digest,
-            tx_seq_num,
-            event,
-            move_struct_json_value,
-        }
-    }
-
     pub fn event_type(&self) -> &'static str {
         self.event.variant_name()
     }

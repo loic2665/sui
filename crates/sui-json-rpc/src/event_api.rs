@@ -57,7 +57,8 @@ impl EventStreamingApiServer for EventStreamingApiImpl {
         let stream = stream.map(move |e: EventEnvelope| {
             let event = SuiEvent::try_from(e.event, state.module_cache.as_ref());
             event.map(|event| SuiEventEnvelope {
-                id: e.seq_num,
+                // The id will not be serialised
+                id: 0,
                 timestamp: e.timestamp,
                 tx_digest: e.tx_digest,
                 event,

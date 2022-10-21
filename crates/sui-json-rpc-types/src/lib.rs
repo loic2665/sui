@@ -1855,6 +1855,7 @@ pub struct OwnedObjectRef {
 pub struct SuiEventEnvelope {
     /// Unique ID of a Sui Event, the ID is generated during transaction post processing,
     /// the ID is local to this particular fullnode and will be different from other fullnode.
+    #[serde(default, skip)]
     pub id: EventID,
     /// UTC timestamp in milliseconds since epoch (1/1/1970)
     pub timestamp: u64,

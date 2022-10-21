@@ -483,7 +483,6 @@
             "value": {
               "data": [
                 {
-                  "id": 10,
                   "timestamp": 0,
                   "txDigest": "gA8fELgirLI/JDKVpMfsOtvDRO4FvjFTQhnc2CGIHXw=",
                   "event": {
@@ -2341,7 +2340,6 @@
         "type": "object",
         "required": [
           "event",
-          "id",
           "timestamp"
         ],
         "properties": {
@@ -2352,12 +2350,6 @@
                 "$ref": "#/components/schemas/Event"
               }
             ]
-          },
-          "id": {
-            "description": "Unique ID of a Sui Event, the ID is generated during transaction post processing, the ID is local to this particular fullnode and will be different from other fullnode.",
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0.0
           },
           "timestamp": {
             "description": "UTC timestamp in milliseconds since epoch (1/1/1970)",
