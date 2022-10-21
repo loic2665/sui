@@ -38,6 +38,9 @@ export class BackgroundClient {
         this._initialized = true;
         this._dispatch = dispatch;
         this.createPortStream();
+        setInterval(() => {
+            this.sendAppStatus(document.visibilityState === 'visible');
+        }, 1000);
         return Promise.all([
             this.sendGetPermissionRequests(),
             this.sendGetTransactionRequests(),
@@ -179,6 +182,17 @@ export class BackgroundClient {
                     throw new Error('Mnemonic not found');
                 })
             )
+        );
+    }
+
+    private sendAppStatus(active: boolean) {
+        console.log('sending app status update', { active });
+        this.sendMessage(
+            createMessage<KeyringPayload<'appStatusUpdate'>>({
+                type: 'keyring',
+                method: 'appStatusUpdate',
+                args: { active },
+            })
         );
     }
 

@@ -15,6 +15,7 @@ import type { Message } from '_messages';
 import type { ErrorPayload } from '_payloads';
 import type { KeyringPayload } from '_payloads/keyring';
 import type { Connection } from '_src/background/connections/Connection';
+import Alarms from './Alarms';
 
 type KeyringEvents = {
     lockedStatusUpdate: boolean;
@@ -44,6 +45,7 @@ class Keyring {
     }
 
     public lock() {
+        Alarms.clearLockAlarm();
         this.#keypair = null;
         this.#mnemonic = null;
         this.#locked = true;
@@ -51,6 +53,7 @@ class Keyring {
     }
 
     public async unlock(password: string) {
+        Alarms.setLockAlarm();
         this.#mnemonic = await this.decryptMnemonic(password);
         this.#keypair = Ed25519Keypair.deriveKeypair(this.#mnemonic);
         this.#locked = false;
@@ -168,6 +171,13 @@ class Keyring {
             } else if (isKeyringPayload<'clear'>(payload, 'clear')) {
                 await this.clearMnemonic();
                 uiConnection.send(createMessage({ type: 'done' }, id));
+            } else if (
+                isKeyringPayload<'appStatusUpdate'>(payload, 'appStatusUpdate')
+            ) {
+                const appActive = payload.args?.active;
+                if (appActive) {
+                    await this.postponeLock();
+                }
             }
         } catch (e) {
             uiConnection.send(
@@ -205,6 +215,12 @@ class Keyring {
 
     private notifyLockedStatusUpdate(isLocked: boolean) {
         this.#events.emit('lockedStatusUpdate', isLocked);
+    }
+
+    private async postponeLock() {
+        if (!this.isLocked) {
+            return Alarms.setLockAlarm();
+        }
     }
 }
 
