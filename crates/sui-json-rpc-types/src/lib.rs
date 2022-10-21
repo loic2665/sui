@@ -2377,9 +2377,8 @@ impl TransactionBytes {
     }
 
     pub fn to_data(self) -> Result<TransactionData, anyhow::Error> {
-        bcs::from_bytes(&self.tx_bytes.to_vec()?)
+        bcs::from_bytes(&self.tx_bytes.to_vec()?[3..])
             .map_err(|e| anyhow::anyhow!("Failed to serialize transaction bytes: {}", e))
-        // TransactionData::from_signable_bytes(&self.tx_bytes.to_vec()?)
     }
 }
 

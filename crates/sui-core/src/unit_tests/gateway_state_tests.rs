@@ -553,7 +553,7 @@ async fn test_get_owner_object() {
         )
         .await
         .unwrap();
-    gateway
+    let response = gateway
         .execute_transaction(to_sender_signed_transaction(data, &key1))
         .await
         .unwrap();

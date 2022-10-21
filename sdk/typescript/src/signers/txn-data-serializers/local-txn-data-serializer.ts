@@ -364,8 +364,9 @@ export class LocalTxnDataSerializer implements TxnDataSerializer {
   async serializeIntentTransactionData(
     tx: TransactionData,
     format: string,
+    size: number = 8192,
   ): Promise<Base64DataBuffer> {
-    const dataBytes = bcs.ser(format, tx).toBytes();
+    const dataBytes = bcs.ser(format, tx, size).toBytes();
     const serialized = new Uint8Array(INTENT_BYTES.length + dataBytes.length);
     
     // First three bytes represent the intent bytes
