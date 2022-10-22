@@ -20,8 +20,8 @@ describe('Event Reading API', () => {
   it('Get all event paged', async () => {
     const page1 = await toolbox.provider.getEvents("All",null,2, "Descending");
     expect(page1.nextCursor).to.not.equal(null);
-    const page2 = await toolbox.provider.getEvents("All",page1.nextCursor,2, "Descending");
-    expect(page2.data[0].id).toEqual(page1.nextCursor);
+    const page2 = await toolbox.provider.getEvents("All",page1.nextCursor,1000, "Descending");
+    expect(page2.nextCursor).toEqual(null);
   });
 
   it('Get events', async () => {

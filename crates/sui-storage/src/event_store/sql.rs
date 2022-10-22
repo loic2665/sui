@@ -691,7 +691,7 @@ mod tests {
 
         // Insert some records
         info!("Inserting records!");
-        let mut to_insert = vec![
+        let to_insert = vec![
             test_utils::new_test_newobj_event(1_000_000, 1, None, None, None),
             test_utils::new_test_publish_event(1_001_000, 2, None),
             test_utils::new_test_transfer_event(
@@ -721,7 +721,7 @@ mod tests {
                 "test_foo",
             ),
         ];
-        assert_eq!(db.add_events(&mut to_insert).await?, 6);
+        assert_eq!(db.add_events(&to_insert).await?, 6);
         info!("Done inserting");
 
         assert_eq!(db.total_event_count().await?, 6);
@@ -749,7 +749,7 @@ mod tests {
 
         // Insert some records
         info!("Inserting records!");
-        let mut to_insert = vec![
+        let to_insert = vec![
             test_utils::new_test_newobj_event(1_000_000, 1, None, None, None),
             test_utils::new_test_publish_event(1_001_000, 2, None),
             test_utils::new_test_transfer_event(
@@ -779,7 +779,7 @@ mod tests {
                 "test_foo",
             ),
         ];
-        db.add_events(&mut to_insert).await?;
+        db.add_events(&to_insert).await?;
         let target_event = &to_insert[2];
         info!("Done inserting");
 
@@ -808,7 +808,7 @@ mod tests {
 
         // Insert some records
         info!("Inserting records!");
-        let mut to_insert = vec![
+        let to_insert = vec![
             test_utils::new_test_newobj_event(1_000_000, 1, None, None, None),
             test_utils::new_test_publish_event(1_001_000, 2, None),
             test_utils::new_test_transfer_event(
@@ -838,7 +838,7 @@ mod tests {
                 "test_foo",
             ),
         ];
-        db.add_events(&mut to_insert).await?;
+        db.add_events(&to_insert).await?;
         info!("Done inserting");
 
         let queried_events = db
@@ -904,7 +904,7 @@ mod tests {
 
         // Insert some records
         info!("Inserting records!");
-        let mut to_insert = vec![
+        let to_insert = vec![
             test_utils::new_test_newobj_event(1_000_000, 1, None, None, None),
             test_utils::new_test_publish_event(1_001_000, 2, None),
             test_utils::new_test_transfer_event(
@@ -941,7 +941,7 @@ mod tests {
                 "test_foo",
             ),
         ];
-        db.add_events(&mut to_insert).await?;
+        db.add_events(&to_insert).await?;
         info!("Done inserting");
 
         // Query for the Move event and validate basic fields
@@ -981,7 +981,7 @@ mod tests {
 
         // Insert some records
         info!("Inserting records!");
-        let mut to_insert = vec![
+        let to_insert = vec![
             test_utils::new_test_move_event(
                 1_000_000,
                 1,
@@ -1005,7 +1005,7 @@ mod tests {
             ),
         ];
 
-        assert_eq!(db.add_events(&mut to_insert).await?, 3);
+        assert_eq!(db.add_events(&to_insert).await?, 3);
         info!("Done inserting");
 
         let events = db
@@ -1039,7 +1039,7 @@ mod tests {
         let sender = SuiAddress::random_for_testing_only();
         let recipient = Owner::AddressOwner(SuiAddress::random_for_testing_only());
         let object_id = ObjectID::random();
-        let mut to_insert = vec![
+        let to_insert = vec![
             test_utils::new_test_transfer_event(
                 // 0, object, sender, recipient
                 1_000_000,
@@ -1102,7 +1102,7 @@ mod tests {
             ),
         ];
 
-        assert_eq!(db.add_events(&mut to_insert).await?, 8);
+        assert_eq!(db.add_events(&to_insert).await?, 8);
         info!("Done inserting");
 
         // Query by sender
@@ -1144,7 +1144,7 @@ mod tests {
         let db = SqlEventStore::new_memory_only_not_prod().await?;
         db.initialize().await?;
 
-        let mut to_insert = vec![test_utils::new_test_transfer_event(
+        let to_insert = vec![test_utils::new_test_transfer_event(
             1_000_000,
             1,
             u64::MAX,
@@ -1153,7 +1153,7 @@ mod tests {
             None,
             None,
         )];
-        db.add_events(&mut to_insert).await?;
+        db.add_events(&to_insert).await?;
 
         let events = db
             .events_by_transaction(0, to_insert[0].tx_digest.unwrap(), 10, false)
@@ -1180,7 +1180,7 @@ mod tests {
 
         // TODO: these 30 lines are quite duplicated in this file (4 times).
         // Write in some events, all should succeed
-        let mut to_insert = vec![
+        let to_insert = vec![
             test_utils::new_test_newobj_event(1_000_000, 1, None, None, None),
             test_utils::new_test_publish_event(1_001_000, 2, None),
             test_utils::new_test_transfer_event(
@@ -1210,11 +1210,11 @@ mod tests {
                 "test_foo",
             ),
         ];
-        assert_eq!(db.add_events(&mut to_insert[..4]).await?, 4);
+        assert_eq!(db.add_events(&to_insert[..4]).await?, 4);
         assert_eq!(db.total_event_count().await?, 4);
 
         // Write in an older event with older sequence number, should be skipped
-        assert_eq!(db.add_events(&mut to_insert[1..2]).await?, 0);
+        assert_eq!(db.add_events(&to_insert[1..2]).await?, 0);
         assert_eq!(db.total_event_count().await?, 4);
 
         // Drop and reload DB from the same file, test that sequence number was recovered
@@ -1225,11 +1225,11 @@ mod tests {
         assert_eq!(db.total_event_count().await?, 4);
 
         // Try ingesting older event, check still skipped
-        assert_eq!(db.add_events(&mut to_insert[1..2]).await?, 0);
+        assert_eq!(db.add_events(&to_insert[1..2]).await?, 0);
         assert_eq!(db.total_event_count().await?, 4);
 
         // Check writing new events still succeeds
-        assert_eq!(db.add_events(&mut to_insert[4..]).await?, 2);
+        assert_eq!(db.add_events(&to_insert[4..]).await?, 2);
         assert_eq!(db.total_event_count().await?, 6);
 
         Ok(())

@@ -3,7 +3,7 @@
 
 import { SuiAddress, ObjectOwner, TransactionDigest } from './common';
 import { ObjectId, SequenceNumber } from './objects';
-import {SuiJsonValue} from './transactions';
+import { SuiJsonValue } from './transactions';
 
 // event types mirror those in "sui-json-rpc-types/lib.rs"
 export type MoveEvent = {
@@ -101,7 +101,6 @@ export type SuiEventFilter =
   | { Or: [SuiEventFilter, SuiEventFilter] };
 
 export type SuiEventEnvelope = {
-  id: EventId;
   timestamp: number;
   txDigest: TransactionDigest;
   event: SuiEvent;

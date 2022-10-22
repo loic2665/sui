@@ -57,10 +57,10 @@ impl EventHandler {
             .iter()
             .map(|e| self.create_envelope(e, effects.transaction_digest, seq_num, timestamp_ms))
             .collect();
-        let mut envelopes = res?;
+        let envelopes = res?;
 
         // Ingest all envelopes together at once (for efficiency) into Event Store
-        self.event_store.add_events(&mut envelopes).await?;
+        self.event_store.add_events(&envelopes).await?;
         trace!(
             num_events = envelopes.len(),
             tx_digest =? effects.transaction_digest,
