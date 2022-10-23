@@ -26,6 +26,7 @@ use sui_keys::keystore::AccountKeystore;
 use sui_macros::*;
 use sui_node::SuiNode;
 use sui_types::base_types::{ObjectRef, SequenceNumber};
+use sui_types::event::BalanceChangeType;
 use sui_types::messages::{
     ExecuteTransactionRequest, ExecuteTransactionRequestType, ExecuteTransactionResponse,
 };
@@ -246,6 +247,7 @@ async fn test_full_node_indexes() -> Result<(), anyhow::Error> {
         package_id: ObjectID::from_hex_literal("0x2").unwrap(),
         transaction_module: "transfer_object".into(),
         sender,
+        change_type: BalanceChangeType::Pay,
         owner: Owner::AddressOwner(sender),
         coin_type: "0x2::sui::SUI".to_string(),
         version: SequenceNumber::from_u64(0),
@@ -256,6 +258,7 @@ async fn test_full_node_indexes() -> Result<(), anyhow::Error> {
         package_id: ObjectID::from_hex_literal("0x2").unwrap(),
         transaction_module: "transfer_object".into(),
         sender,
+        change_type: BalanceChangeType::Receive,
         owner: Owner::AddressOwner(receiver),
         coin_type: "0x2::sui::SUI".to_string(),
         version: SequenceNumber::from_u64(1),
@@ -266,6 +269,7 @@ async fn test_full_node_indexes() -> Result<(), anyhow::Error> {
         package_id: ObjectID::from_hex_literal("0x2").unwrap(),
         transaction_module: "gas".into(),
         sender,
+        change_type: BalanceChangeType::Gas,
         owner: Owner::AddressOwner(sender),
         coin_type: "0x2::sui::SUI".to_string(),
         version: gas.1,
@@ -694,6 +698,7 @@ async fn test_full_node_event_read_api_ok() -> Result<(), anyhow::Error> {
         package_id: ObjectID::from_hex_literal("0x2").unwrap(),
         transaction_module: "transfer_object".into(),
         sender,
+        change_type: BalanceChangeType::Pay,
         owner: Owner::AddressOwner(sender),
         coin_type: "0x2::sui::SUI".to_string(),
         version: SequenceNumber::from_u64(0),
@@ -704,6 +709,7 @@ async fn test_full_node_event_read_api_ok() -> Result<(), anyhow::Error> {
         package_id: ObjectID::from_hex_literal("0x2").unwrap(),
         transaction_module: "transfer_object".into(),
         sender,
+        change_type: BalanceChangeType::Receive,
         owner: Owner::AddressOwner(receiver),
         coin_type: "0x2::sui::SUI".to_string(),
         version: SequenceNumber::from_u64(1),
@@ -714,6 +720,7 @@ async fn test_full_node_event_read_api_ok() -> Result<(), anyhow::Error> {
         package_id: ObjectID::from_hex_literal("0x2").unwrap(),
         transaction_module: "gas".into(),
         sender,
+        change_type: BalanceChangeType::Gas,
         owner: Owner::AddressOwner(sender),
         coin_type: "0x2::sui::SUI".to_string(),
         version: gas.1,
